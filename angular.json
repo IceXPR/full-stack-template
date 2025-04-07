@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "your-project-name": {
+      "architect": {
+        "serve": {
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          }
+        }
+      }
+    }
+  }
+} 

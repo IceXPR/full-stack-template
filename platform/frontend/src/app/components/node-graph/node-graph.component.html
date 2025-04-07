@@ -1,0 +1,174 @@
+<div class="node-graph-container">
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <input type="text" [(ngModel)]="simulationName" placeholder="Simulation name">
+      <button (click)="saveSimulation($event)" [disabled]="!simulationName">
+        <i class="fas fa-save"></i>
+      </button>
+    </div>
+    <div class="toolbar-row">
+      <select [(ngModel)]="selectedNodeType">
+        <option *ngFor="let type of nodeTypes" [value]="type.id">
+          {{type.name}}
+        </option>
+      </select>
+      <button (click)="addNode($event)">Add Node</button>
+      <!-- <button (click)="saveArea($event)">Save Area</button>
+      <button (click)="loadArea($event)">Load Area</button> -->
+      <button (click)="generateSimulation($event.shiftKey)">Simulate</button>
+      <input type="number" [(ngModel)]="simulationMonths" placeholder="Simulation months">Months
+      <select [(ngModel)]="selectedSimulation" (ngModelChange)="selectedSimulation = $event">
+        <option [ngValue]="null">Select Saved Simulation</option>
+        <option *ngFor="let simulation of savedSimulations" [ngValue]="simulation">
+          {{simulation.name}}
+        </option>
+      </select>
+      <button (click)="loadSimulation($event)" [disabled]="!selectedSimulation">Load</button>
+      <button (click)="deleteSimulation($event)" [disabled]="!selectedSimulation">Delete Simulation</button>
+      <button (click)="duplicateSimulation($event)" [disabled]="!selectedSimulation">Duplicate Simulation</button>
+      <button (click)="resetSimulation($event)">Reset Simulation</button>
+    </div>
+  </div>
+
+  <div class="graph-area" 
+       (click)="handleCanvasClick($event)"
+       (mousemove)="updateConnection($event)"
+       (mouseup)="stopDrag()">
+    
+    <!-- Nodes -->
+    <div *ngFor="let node of nodes" 
+         class="node"
+         [class]="node.type"
+         [style.left.px]="node.x"
+         [style.top.px]="node.y"
+         (mousedown)="startDrag(node, $event)"
+         (mouseup)="stopDrag()">
+      
+      <div class="node-header">
+        <button (click)="removeNode(node.id)" style="position: absolute; top: 0; right: 0;margin-top: 3px;margin-right: 3px;">X</button>
+        <div class="node-name">
+          <div class="node-name-text">
+            <input type="text" [(ngModel)]="node.name" class="node-name-input">
+          </div>
+          <span>{{node.type}}</span>
+        </div>
+        
+        <div class="node-inputs"></div>
+        
+      </div>
+      
+      <div class="node-content">
+        <div *ngIf="node.inputConnector" class="input-point"
+             (mousedown)="startConnection(node, false, $event)"
+             (mouseup)="completeConnection(node, false, $event)">
+        </div>
+        <div *ngIf="node.outputConnector" class="output-point"
+             (mousedown)="startConnection(node, true, $event)"
+             (mouseup)="completeConnection(node, true, $event)">
+        </div>
+      </div>
+
+      <div *ngIf="node.type === 'investment'" class="node-properties">
+        <label>
+          Amount:
+          <input type="number" class="node-name-input"
+                 [(ngModel)]="node.properties.amount" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">
+        </label>
+      </div>
+      <div *ngIf="node.type === 'ticker'" class="node-properties">
+        <label>
+          Dividend Share:
+          <input type="number" class="node-name-input"
+                 [(ngModel)]="node.properties.dividendShare" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">
+        </label>
+        <label>
+          Price:
+          <input type="number" class="node-name-input"
+                 [(ngModel)]="node.properties.price" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">
+        </label>
+        <label>
+          Shares:
+          <input type="number" class="node-name-input"
+                 [(ngModel)]="node.properties.shares" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">
+        </label>
+        <label>
+          Symbol:
+          <input type="text" class="node-name-input"
+                 [(ngModel)]="node.properties.symbol" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">
+        </label>
+      </div>
+      <div *ngIf="node.type === 'ticker-purchase'" class="node-properties">
+        <label>
+          Symbol:
+          <input type="text" class="node-name-input"
+                 [(ngModel)]="node.properties.symbol" 
+                 (click)="$event.stopPropagation()"
+                 (mousedown)="$event.stopPropagation()">  
+        </label>
+      </div>
+      <div *ngIf="node.history && node.history.length > 0" class="node-history">
+        Iter - Value
+        <div *ngFor="let history of node.history">          
+          {{history.iteration}} - ${{history.amount.toFixed(2).padStart(8, ' ')}}
+          <!-- {{history.iteration.toString().padStart(2, '0')}} - ${{history.amount.toFixed(2).padStart(8, ' ')}} -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Connections -->
+    <svg class="connections-layer">
+      <g *ngFor="let conn of connections">
+        <path [attr.d]="generatePath(conn)"
+              class="connection-path"
+              (click)="editConnectionPercentage(conn, $event)">
+        </path>
+        <text [attr.x]="getTextPosition(conn).x"
+              [attr.y]="getTextPosition(conn).y"
+              class="connection-label"
+              (click)="editConnectionPercentage(conn, $event)">
+          {{(conn.percentage * 100).toFixed(0)}}%
+        </text>
+      </g>
+      
+      <path *ngIf="currentConnection"
+            [attr.d]="generatePath(currentConnection)"
+            class="connection-path temporary"/>
+    </svg>
+
+    <div *ngIf="showPercentageInput" 
+         class="percentage-input-overlay"
+         [style.left.px]="percentageInputPosition.x"
+         [style.top.px]="percentageInputPosition.y">
+      <input type="number" 
+             [(ngModel)]="temporaryPercentage" 
+             min="0" 
+             max="100"
+             placeholder="Percentage">
+      <button (click)="confirmPercentage()">OK</button>
+      <button (click)="hidePercentageInput()">Cancel</button>
+    </div>
+
+    <div *ngIf="showConnectionInput" 
+         class="connection-input-overlay"
+         [style.left.px]="connectionInputPosition.x"
+         [style.top.px]="connectionInputPosition.y">
+      <input type="number" 
+             [(ngModel)]="temporaryConnectionPercentage" 
+             min="0" 
+             max="100"
+             placeholder="Percentage">
+      <button (click)="confirmConnectionEdit()">OK</button>
+      <button (click)="hideConnectionInput()">Cancel</button>
+    </div>
+  </div>
+</div> 

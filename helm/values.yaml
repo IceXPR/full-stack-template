@@ -1,0 +1,29 @@
+global:
+  environment: production
+  
+imagePullSecrets:
+  create: true
+  registry: "registry.gitlab.com/full-stack-template"
+  username: "icexpr"
+  password: ""
+  
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: full-stack-template.jaclab.net
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: full-stack-template-tls
+      hosts:
+        - full-stack-template.example.com 
