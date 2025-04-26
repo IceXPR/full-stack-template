@@ -65,4 +65,12 @@ networkPolicy:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: backend
-              app.kubernetes.io/instance: full-stack-template 
+              app.kubernetes.io/instance: stocksgraph
+    # Allow DNS lookups
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP 
