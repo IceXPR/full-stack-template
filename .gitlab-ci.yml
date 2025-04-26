@@ -36,13 +36,30 @@ variables:
 
   CONTAINER_TAG: ${CI_PIPELINE_IID}
 
+  SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
+  SCAN_KUBERNETES_MANIFESTS: "true"
+
+  AGENT_NAME: superaccelerator-jaclab
+  KUBE_CONTEXT: ${CI_PROJECT_PATH}:${AGENT_NAME}
+
 stages:
+  - test
   - build
   - deploy
 
-before_script:
-  - docker info
-  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY" 
+
+test-backend:
+  stage: test
+  image: node:22
+  script:
+    - cd platform/backend
+    - npm install
+    - npm test -- --coverage
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
 
 build-backend:
   stage: build
@@ -50,6 +67,8 @@ build-backend:
   services:
     - name: docker:24.0-dind
   script:
+    - docker info
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY" 
     - echo Building container "$CI_REGISTRY_IMAGE/backend-app:$CONTAINER_TAG"
     - docker build -t "$CI_REGISTRY_IMAGE/backend-app:latest" platform/backend
     - docker build -t "$CI_REGISTRY_IMAGE/backend-app:$CONTAINER_TAG" platform/backend
@@ -71,6 +90,8 @@ build-frontend:
   services:
     - name: docker:24.0-dind
   script:
+    - docker info
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY" 
     - echo Building container "$CI_REGISTRY_IMAGE/backend-app:$CONTAINER_TAG"
     - docker build -t "$CI_REGISTRY_IMAGE/frontend-app:latest" platform/frontend
     - docker build -t "$CI_REGISTRY_IMAGE/frontend-app:$CONTAINER_TAG" platform/frontend
@@ -85,4 +106,45 @@ build-frontend:
   #     changes:
   #       - platform/frontend/**/*
   #     when: always
+
+deploy:
+  stage: deploy
+  image: 
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  environment:
+    name: production
+    kubernetes:
+      namespace: $APPLICATION_NAME 
+  before_script:
+    # Install dependencies and verify Helm
+    - apk add --no-cache bash curl
+    - helm version
+    # Add Helm repository
+    - helm repo add gila-repo https://charts.gitlab.io # Replace with your chart registry URL
+    - helm repo update
+  script:
+    # Verify Helm command
+      # --atomic
+      # --timeout 5m
+    - echo $KUBE_CONTEXT
+    - helm version
+    - helm upgrade --install $APPLICATION_NAME ./helm
+      --namespace $APPLICATION_NAMESPACE
+      --create-namespace
+      --debug
+      --set frontend.image.repository="$CI_REGISTRY_IMAGE/frontend-app"
+      --set frontend.image.tag="$CONTAINER_TAG"
+      --set backend.image.repository="$CI_REGISTRY_IMAGE/backend-app"
+      --set backend.image.tag="$CONTAINER_TAG"
+      --set backend.database.host=$DB_HOST
+      --set backend.database.name=$DB_DATABASE
+      --set backend.database.credentials.username=$DB_USERNAME
+      --set backend.database.credentials.password=$DB_PASSWORD
+      --set imagePullSecrets.password=$REGISTRY_PASSWORD
+      --kube-context="$KUBE_CONTEXT"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: on_success
+  
 
