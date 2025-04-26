@@ -68,3 +68,11 @@ networkPolicy:
               - 10.0.0.0/8
               - 172.16.0.0/12
               - 192.168.0.0/16 
+
+database:
+  host: "postgresql"
+  port: "5432"
+  name: "stocksgraph"
+  credentials:
+    username: "postgres"
+    password: "changeme"
