@@ -11,18 +11,27 @@ ingress:
   enabled: true
   className: traefik
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: APPLICATION_NAME_HERE-strip-api-prefix@kubernetescrd
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.tls: "true"
     # cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: full-stack-template.jaclab.net
+    - host: APPLICATION_NAME_HERE.jaclab.net
       paths:
         - path: /
-          pathType: Prefix
+          pathType: ImplementationSpecific
           service: frontend
+          # port: 80
+          name: http
         - path: /api
-          pathType: Prefix
+          pathType: ImplementationSpecific
           service: backend
+          # port: 3000
+          name: http
+          middlewares:
+            stripPrefix:
+            prefixes:
+              - /api
   #enable tls for the ingress if not using a tunnel or tls proxy
   # tls:
   #   - secretName: full-stack-template-tls
