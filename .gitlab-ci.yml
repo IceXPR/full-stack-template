@@ -47,7 +47,6 @@ stages:
   - build
   - deploy
 
-
 test-backend:
   stage: test
   image: node:22
@@ -59,6 +58,8 @@ test-backend:
     - if: $CI_PIPELINE_SOURCE == "push"
       when: on_success
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "web"
       when: on_success
 
 build-backend:
@@ -74,7 +75,13 @@ build-backend:
     - docker build -t "$CI_REGISTRY_IMAGE/backend-app:$CONTAINER_TAG" platform/backend
     - docker push "$CI_REGISTRY_IMAGE/backend-app:latest"
     - docker push "$CI_REGISTRY_IMAGE/backend-app:$CONTAINER_TAG"
-  # rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: on_success
   #   - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   #     changes:
   #       - platform/backend/**/*
@@ -97,6 +104,13 @@ build-frontend:
     - docker build -t "$CI_REGISTRY_IMAGE/frontend-app:$CONTAINER_TAG" platform/frontend
     - docker push "$CI_REGISTRY_IMAGE/frontend-app:latest"
     - docker push "$CI_REGISTRY_IMAGE/frontend-app:$CONTAINER_TAG"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: on_success
   # rules:
   #   - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   #     changes:
@@ -145,6 +159,8 @@ deploy:
       --kube-context="$KUBE_CONTEXT"
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "web"
       when: on_success
   
 
