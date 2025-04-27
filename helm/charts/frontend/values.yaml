@@ -65,7 +65,7 @@ networkPolicy:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: backend
-              app.kubernetes.io/instance: stocksgraph
+              app.kubernetes.io/instance: APPLICATION_NAME_HERE
     # Allow DNS lookups
     - to:
         - namespaceSelector: {}

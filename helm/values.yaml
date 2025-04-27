@@ -23,7 +23,8 @@ ingress:
         - path: /api
           pathType: Prefix
           service: backend
-  tls:
-    - secretName: full-stack-template-tls
-      hosts:
-        - full-stack-template.example.com 
+  #enable tls for the ingress if not using a tunnel or tls proxy
+  # tls:
+  #   - secretName: full-stack-template-tls
+  #     hosts:
+  #       - full-stack-template.example.com 

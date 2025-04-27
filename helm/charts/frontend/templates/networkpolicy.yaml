@@ -20,6 +20,8 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.service.port }}
+        - protocol: TCP
+          port: 8080
   egress:
     {{- toYaml .Values.networkPolicy.egress | nindent 4 }}
 {{- end }} 
